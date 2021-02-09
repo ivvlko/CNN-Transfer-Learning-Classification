@@ -8,7 +8,8 @@ import tensorflow as tf
 from tensorflow.keras.models import Model, Sequential
 from tensorflow.keras.layers import Input , Dense, Flatten, Dropout, Conv2D, MaxPool2D
 
-from tensorflow.keras.applications import resnet_v2, inception_resnet_v2
+from tensorflow.keras.applications import vgg16
+
 
 import tensorflow_datasets as tfds
 from tensorflow.keras.callbacks import EarlyStopping
@@ -21,7 +22,7 @@ from tensorflow.keras.metrics import TopKCategoricalAccuracy
 ### HERE WE JUST PREPARE THE DS THE SAME WAY WE DID BEFORE
 
 dataset, info = tfds.load(name="stanford_dogs", with_info=True)
-resnet_inception = inception_resnet_v2.InceptionResNetV2()
+vgg16_model = vgg16.VGG16()
 
 IMG_LEN = 299
 IMG_SHAPE = (IMG_LEN, IMG_LEN,3)
@@ -48,7 +49,7 @@ def prepare(dataset, batch_size=None):
     return ds
 
 
-resnet_inception = Model(inputs = resnet_inception.layers[0].input, outputs = resnet_inception.layers[780].output)
+vgg16_model = Model(inputs = vgg16_model.layers[0].input, outputs = vgg16_model.layers[20].output)
 for layer in resnet_inception.layers:
   layer.trainable = False
 
@@ -78,23 +79,23 @@ def plot_train_and_validation_results(train, validation, title, epochs_range):
 
 # Architectures to test
 
-resnet_inception_one_fnn_layer = Sequential([
+vgg16_model_one_fnn_layer = Sequential([
                            data_augmentation,
-                           resnet_inception,
+                           vgg16_model,
                            Dense(N_BREEDS, activation = 'softmax')
 ])
 
-resnet_inception_two_fnn_layers = Sequential([
+vgg16_model_two_fnn_layers = Sequential([
                            data_augmentation,
-                           resnet_inception,
+                           vgg16_model,
                            Dense(256, activation = 'relu'),
                            Dropout(0.2),
                            Dense(N_BREEDS, activation = 'softmax')
 ])
 
-resnet_inception_three_fnn_layers = Sequential([
+vgg16_model_three_fnn_layers = Sequential([
                            data_augmentation,
-                           resnet_inception,
+                           vgg16_model,
                            Dense(512, activation = 'relu'),
                            Dropout(0.3),
                            Dense(256, activation = 'relu'),
@@ -108,12 +109,12 @@ resnet_inception_three_fnn_layers = Sequential([
 
 # We'll focus mainly on the most important hyperparameters since we are using Transfer Learning with very strong model 
 OPTIMIZERS = [Adam, SGD, RMSprop]
-LEARNING_RATE = [0.01, 0.001, 0.0001, 0.00001, 0.03, 0.003, 0.0005, 0.00005, 0.05, 0.005, 0.0005, 0.00005]
+LEARNING_RATE = [0.01, 0.001, 0.0001, 0.00001, 0.03, 0.003, 0.0003, 0.00003, 0.05, 0.005, 0.0005, 0.00005]
 BATCH_SIZE = [16, 32, 64, 128]
 
 early_stopping = EarlyStopping(monitor = 'val_loss', patience = 3)
-# Grid Search
 
+# Grid Search
 
 def perform_grid_search(opt, lr, bs, model):
     # Just cross tunning every parameter with each other with 3 nested for loops.
@@ -123,12 +124,12 @@ def perform_grid_search(opt, lr, bs, model):
         for optimizer in opt:
             for learning_rate in lr:
                 model.compile(optimizer = optimizer(learning_rata = learning_rate), loss = 'categorical_crossentropy', metrics = ['accuracy', TopKCategoricalAccuracy(k=3)])
-                model_history = resnet_inception.fit(train_batches, validation_data=test_batches,  epochs = 50, callbacks = [early_stopping])
+                model_history = model.fit(train_batches, validation_data=test_batches,  epochs = 50, callbacks = [early_stopping])
                 plot_train_and_validation_results(model_history.history['loss'], model_history.history['val_loss'], 'Training and Validation Loss', range(0, 51, 10) )
                 plot_train_and_validation_results(model_history.history['accuracy'], model_history.history['val_accuracy'], 'Training and Validation Accuracy', range(0, 51, 10) )
                 plot_train_and_validation_results(model_history.history['top_k_categorical_accuracy'], model_history.history['val_top_k_categorical_accuracy'], 'Top 3 Training and Validation Accuracy',  range(0, 51, 10))
 
 
-perform_grid_search(resnet_inception_one_fnn_layer)
-perform_grid_search(resnet_inception_two_fnn_layers)
-perform_grid_search(resnet_inception_three_fnn_layers)
+perform_grid_search(OPTIMIZERS, LEARNING_RATE, BATCH_SIZE, vgg16_model_one_fnn_layer)
+perform_grid_search(OPTIMIZERS, LEARNING_RATE, BATCH_SIZE, vgg16_model_two_fnn_layers)
+perform_grid_search(OPTIMIZERS, LEARNING_RATE, BATCH_SIZE, vgg16_model_three_fnn_layers)
