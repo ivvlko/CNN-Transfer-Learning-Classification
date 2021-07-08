@@ -4,7 +4,7 @@ Repo for Deep Learning model that classifies dog's breed in a picture. Includes:
 
 1) Problem definition and Exploratory data analysis
 
-2) Hyperparameters tuning with Grid Search
+2) Customizing tf dataset, add new breed
 
 3) Training, validation and evaluation
 
